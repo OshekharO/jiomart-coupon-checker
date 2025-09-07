@@ -62,38 +62,37 @@
 <script>
   // Generate unique 10-char coupon (digit/letter alternating)
   function generateCoupon(prefixInput = "") {
-  const digits = "0123456789";
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const digits = "0123456789";
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-  let code = (prefixInput || "").toUpperCase();
+    let code = (prefixInput || "").toUpperCase();
 
-  // Enforce strict max length = 10
-  if (code.length > 10) code = code.slice(0, 10);
+    // Enforce strict max length = 10
+    if (code.length > 10) code = code.slice(0, 10);
 
-  // Determine what should come next
-  let nextShouldBeDigit;
-  if (code.length === 0) {
-    nextShouldBeDigit = true; // start with digit
-  } else {
-    const lastChar = code[code.length - 1];
-    nextShouldBeDigit = isNaN(lastChar); // if last is letter → next is digit
-  }
-
-  while (code.length < 10) {
-    if (nextShouldBeDigit) {
-      const digit = digits[Math.floor(Math.random() * digits.length)];
-      code += digit;
+    // Determine what should come next
+    let nextShouldBeDigit;
+    if (code.length === 0) {
+      nextShouldBeDigit = true; // start with digit
     } else {
-      const letter = letters[Math.floor(Math.random() * letters.length)];
-      code += letter;
+      const lastChar = code[code.length - 1];
+      nextShouldBeDigit = isNaN(lastChar); // if last is letter → next is digit
     }
-    nextShouldBeDigit = !nextShouldBeDigit;
+
+    while (code.length < 10) {
+      if (nextShouldBeDigit) {
+        const digit = digits[Math.floor(Math.random() * digits.length)];
+        code += digit;
+      } else {
+        const letter = letters[Math.floor(Math.random() * letters.length)];
+        code += letter;
+      }
+      nextShouldBeDigit = !nextShouldBeDigit;
+    }
+
+    return code;
   }
 
-  return code;
-}
-
-  // Sleep helper
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   document.getElementById("configForm").addEventListener("submit", async (e) => {
@@ -129,21 +128,27 @@
 
         const data = await res.json();
 
-        if (data.result?.status === "success") {
+        if (data.result?.status === "success" || data.result?.result?.[0]?.applicable) {
           row.cells[1].innerHTML = "✅ Valid";
           row.cells[2].innerHTML = "Discount applied!";
+          
+          tableBody.insertBefore(row, tableBody.firstChild);
+
+          row.className = "table-success";
         } else {
           row.cells[1].innerHTML = "❌ Invalid";
           row.cells[2].innerHTML = data.result?.reason?.reason_eng || "Unknown";
+          row.className = "table-danger";
         }
       } catch (err) {
         row.cells[1].innerHTML = "⚠️ Error";
         row.cells[2].innerHTML = err.message;
+        row.className = "table-warning";
       }
 
-      // Wait 15s before next request
+      // Wait 10s before next request
       if (i < count - 1) {
-        await sleep(15000);
+        await sleep(10000);
       }
     }
   });
