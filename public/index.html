@@ -4,6 +4,28 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JioMart Coupon Generator & Checker</title>
+  <!-- Primary Meta Tags -->
+<meta name="title" content="JioMart Coupon Generator & Checker - Test Valid Coupons Easily">
+<meta name="description" content="Free JioMart coupon generator and validity checker. Generate random or custom coupons, auto-rotate User IDs, and highlight valid coupons instantly.">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://jiomart-coupon-checker.vercel.app/">
+<meta property="og:title" content="JioMart Coupon Generator & Checker - Test Valid Coupons Easily">
+<meta property="og:description" content="Generate random or custom coupons, auto-rotate User IDs, and highlight valid coupons instantly.">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://jiomart-coupon-checker.vercel.app/">
+<meta name="twitter:title" content="JioMart Coupon Generator & Checker - Test Valid Coupons Easily">
+<meta name="twitter:description" content="Free JioMart coupon generator and validity checker tool. Quickly test coupons, auto-switch IDs, and find working deals.">
+
+<!-- Extra SEO -->
+<meta name="keywords" content="JioMart coupons, JioMart coupon generator, JioMart discount codes, JioMart promo checker, free coupons JioMart, coupon validity checker">
+<meta name="author" content="OshekharO">
+<meta name="robots" content="index, follow">
+<meta name="language" content="en">
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     .sticky-top {
@@ -37,7 +59,7 @@
       </div>
       <div class="col-md-6">
         <label class="form-label">How many coupons to test (if generating)?</label>
-        <input type="number" class="form-control" id="count" value="10" min="1" max="200">
+        <input type="number" class="form-control" id="count" value="10" min="1">
       </div>
       <div class="col-md-6">
         <label class="form-label">Prefix (optional)</label>
@@ -64,7 +86,7 @@
                 <th>Coupon</th>
                 <th>Status</th>
                 <th>Message</th>
-                <th>Using User ID</th>
+                <th>ID</th>
               </tr>
             </thead>
             <tbody id="resultTable"></tbody>
@@ -178,7 +200,7 @@
             currentUserId = nextId.value;
             console.warn("⚠️ 403 detected → switched User ID to:", currentUserId);
           }
-          i--; // retry same coupon
+          i--;
           row.remove();
           continue;
         }
@@ -203,8 +225,8 @@
 
       couponCounter++;
 
-      // 🔄 Rotate User ID every 8 coupons
-      if (couponCounter % 8 === 0) {
+      // 🔄 Rotate User ID every 6 coupons
+      if (couponCounter % 6 === 0) {
         const nextId = userIds.next();
         if (!nextId.done) {
           currentUserId = nextId.value;
@@ -213,7 +235,7 @@
       }
 
       if (i < coupons.length - 1) {
-        await sleep(10000);
+        await sleep(5000);
       }
     }
   });
