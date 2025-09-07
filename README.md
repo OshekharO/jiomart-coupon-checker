@@ -1,5 +1,7 @@
 # 🛒 JioMart Coupon Generator & Checker
 
+use: https://jiomart-bulk-check.vercel.app (to checkin bulk and bypass rate limit)
+
 A simple web app to **generate random 10-character coupon codes** and **test them against JioMart’s coupon API**.  
 Built with **Bootstrap 5 + Plain JavaScript** and deployed on **Vercel**.
 
