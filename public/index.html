@@ -165,7 +165,7 @@
     return items[items.length - 1];
   }
 
-  // Coupon Generator
+  // Coupon Generator (both modes)
   function generateCoupon(prefixInput = "", mode = "alternating") {
     if (mode === "numeric") {
       let code = "T";
@@ -205,11 +205,19 @@
     const tableBody = document.getElementById("resultTable");
     tableBody.innerHTML = "";
 
+    const generated = new Set();
     let coupons = [];
+
     if (customCoupons.length > 0) {
       coupons = customCoupons.split("\n").map(c => c.trim()).filter(Boolean);
     } else {
-      for (let i = 0; i < count; i++) coupons.push(generateCoupon(prefix, mode));
+      while (coupons.length < count) {
+        const coupon = generateCoupon(prefix, mode);
+        if (!generated.has(coupon)) {
+          generated.add(coupon);
+          coupons.push(coupon);
+        }
+      }
     }
 
     const userIds = userIdGenerator(baseUserId);
