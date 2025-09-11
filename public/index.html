@@ -128,7 +128,7 @@
     // Alternating mode
     let code = cleanPrefix.slice(0, 10); // start with prefix
     let nextShouldBeDigit = code.length === 0 ? true : isNaN(code[code.length - 1]);
-    while (code.length < 11) {
+    while (code.length < 10) {
       code += nextShouldBeDigit ? weightedChoice(digitWeights) : weightedChoice(letterWeights);
       nextShouldBeDigit = !nextShouldBeDigit;
     }
