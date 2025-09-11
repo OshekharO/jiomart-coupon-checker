@@ -4,14 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JioMart Coupon Generator & Checker</title>
-    <!-- Primary Meta Tags -->
-    <meta name="title" content="JioMart Coupon Generator & Checker - Test Valid Coupons Easily" />
-    <meta name="description" content="Free JioMart coupon generator and validity checker. Generate random or custom coupons, auto-rotate User IDs, and highlight valid coupons instantly." />
-    <!-- Extra SEO -->
-    <meta name="keywords" content="JioMart coupons, JioMart coupon generator, JioMart discount codes, JioMart promo checker, free coupons JioMart, coupon validity checker" />
-    <meta name="author" content="OshekharO" />
-    <meta name="robots" content="index, follow" />
-    <meta name="language" content="en" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
       .sticky-top {
@@ -63,8 +55,9 @@
           <label class="form-label">Custom Coupon List (optional)</label>
           <textarea class="form-control" id="customCoupons" rows="4" placeholder="Paste coupons here..."></textarea>
         </div>
-        <div class="col-12">
+        <div class="col-12 d-flex gap-2">
           <button class="btn btn-primary w-100">Generate / Check</button>
+          <button type="button" id="downloadBtn" class="btn btn-success">⬇️ Download Valid Codes</button>
         </div>
       </form>
 
@@ -91,189 +84,69 @@
     </div>
 
     <script>
-      // Weighted digits
-      const digitWeights = {
-        "1": 0.2,
-        "8": 0.2,
-        "9": 0.18,
-        "6": 0.15,
-        "0": 0.12,
-        "4": 0.1,
-        "2": 0.015,
-        "3": 0.015,
-        "5": 0.015,
-        "7": 0.015,
-      };
+      const digitWeights = { "1":0.2,"8":0.2,"9":0.18,"6":0.15,"0":0.12,"4":0.1,"2":0.015,"3":0.015,"5":0.015,"7":0.015 };
+      const letterWeights = {Z:.1,C:.1,N:.1,L:.08,J:.08,E:.08,A:.08,R:.07,T:.07,U:.06,W:.04,Y:.04,O:.04,Q:.03,K:.03,S:.03,D:.02,G:.02,X:.02,H:.02,F:.01,V:.01,M:.005,P:.005,B:.005,I:.005};
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(l=>{if(!letterWeights[l]) letterWeights[l]=0.001;});
 
-      // Weighted letters
-      const letterWeights = {
-        Z: 0.1,
-        C: 0.1,
-        N: 0.1,
-        L: 0.08,
-        J: 0.08,
-        E: 0.08,
-        A: 0.08,
-        R: 0.07,
-        T: 0.07,
-        U: 0.06,
-        W: 0.04,
-        Y: 0.04,
-        O: 0.04,
-        Q: 0.03,
-        K: 0.03,
-        S: 0.03,
-        D: 0.02,
-        G: 0.02,
-        X: 0.02,
-        H: 0.02,
-        F: 0.01,
-        V: 0.01,
-        M: 0.005,
-        P: 0.005,
-        B: 0.005,
-        I: 0.005,
-      };
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((l) => {
-        if (!letterWeights[l]) letterWeights[l] = 0.001;
+      function weightedChoice(weights){const items=Object.keys(weights);const probs=Object.values(weights);const total=probs.reduce((a,b)=>a+b,0);let r=Math.random()*total;for(let i=0;i<items.length;i++){r-=probs[i];if(r<=0) return items[i];}return items[items.length-1];}
+
+      function generateCoupon(prefixInput="",mode="auto"){const cleanPrefix=(prefixInput||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+        if(mode==="numeric"||(mode==="auto"&&/^T\d*$/.test(cleanPrefix))){let code=cleanPrefix.length>0?cleanPrefix:"T";while(code.length<11) code+=Math.floor(Math.random()*10);return code.slice(0,11);}
+        let code=cleanPrefix.slice(0,10);let nextShouldBeDigit=code.length===0?true:isNaN(code[code.length-1]);while(code.length<10){code+=nextShouldBeDigit?weightedChoice(digitWeights):weightedChoice(letterWeights);nextShouldBeDigit=!nextShouldBeDigit;}return code;}
+
+      function* userIdGenerator(baseUserId){for(let i=1;i<=127;i++)yield"0".repeat(i)+baseUserId;for(let i=1;i<=125;i++)yield"+"+"0".repeat(i)+baseUserId;}
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+      let validCoupons=[]; // ✅ store working coupons
+
+      document.getElementById("configForm").addEventListener("submit",async e=>{
+        e.preventDefault();
+        validCoupons=[];
+
+        const cartId=document.getElementById("cartId").value;
+        const authToken=document.getElementById("authToken").value;
+        const baseUserId=document.getElementById("userId").value;
+        const pin=document.getElementById("pin").value;
+        const count=parseInt(document.getElementById("count").value);
+        const prefix=document.getElementById("prefix").value.trim();
+        const mode=document.getElementById("mode").value;
+        const customCoupons=document.getElementById("customCoupons").value.trim();
+
+        const tableBody=document.getElementById("resultTable");tableBody.innerHTML="";
+        let coupons=[];
+        if(customCoupons.length>0){coupons=customCoupons.split("\n").map(c=>c.trim()).filter(Boolean);}
+        else{const generated=new Set();while(coupons.length<count){const c=generateCoupon(prefix,mode);if(!generated.has(c)){generated.add(c);coupons.push(c);}}}
+
+        const userIds=userIdGenerator(baseUserId);let currentUserId=baseUserId;let couponCounter=0;
+
+        for(let i=0;i<coupons.length;i++){const coupon=coupons[i];const row=document.createElement("tr");
+          row.innerHTML=`<td>${i+1}</td><td>${coupon}</td><td>⏳ Checking...</td><td></td><td>${currentUserId}</td>`;tableBody.appendChild(row);
+          try{
+            const res=await fetch("/api/check-coupon",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({coupon,cartId,authToken,userId:currentUserId,pin})});
+            if(res.status===403){const nextId=userIds.next();if(!nextId.done){currentUserId=nextId.value;console.warn("⚠️ 403 → switched User ID:",currentUserId);}i--;row.remove();continue;}
+            const data=await res.json();
+
+            if(data.result?.status==="success"||data.result?.result?.[0]?.applicable){const info=data.result?.additional_general_info||{};
+              row.cells[2].innerHTML="✅ Valid";row.cells[3].innerHTML=`SUCCESS - cart_id: ${info.cart_id||"?"}, customer_id: ${info.customer_id||"?"}`;row.className="table-success";
+              tableBody.insertBefore(row,tableBody.firstChild);
+              validCoupons.push(coupon); // ✅ save working coupon
+            } else if(data.error){const reasonObj=data.error.reason||{};row.cells[2].innerHTML="❌ Invalid";row.cells[3].innerHTML=`${reasonObj.reason_code||"UNKNOWN"} - ${reasonObj.reason_eng||"Unknown"}`;row.className="table-danger";}
+            else{const reasonObj=data.result?.reason||data.result?.result?.[0]||{};row.cells[2].innerHTML="❌ Invalid";row.cells[3].innerHTML=`${reasonObj.reason_code||"UNKNOWN"} - ${reasonObj.reason_eng||"Unknown"}`;row.className="table-danger";}
+          }catch(err){row.cells[2].innerHTML="⚠️ Error";row.cells[3].innerHTML=err.message;row.className="table-warning";}
+
+          couponCounter++;if(couponCounter%6===0){const nextId=userIds.next();if(!nextId.done)currentUserId=nextId.value;}
+          if(i<coupons.length-1)await sleep(3000);
+        }
       });
 
-      function weightedChoice(weights) {
-        const items = Object.keys(weights);
-        const probs = Object.values(weights);
-        const total = probs.reduce((a, b) => a + b, 0);
-        let r = Math.random() * total;
-        for (let i = 0; i < items.length; i++) {
-          r -= probs[i];
-          if (r <= 0) return items[i];
-        }
-        return items[items.length - 1];
-      }
-
-      // Coupon Generator
-      function generateCoupon(prefixInput = "", mode = "auto") {
-        const cleanPrefix = (prefixInput || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-        // Numeric mode
-        if (mode === "numeric" || (mode === "auto" && /^T\d*$/.test(cleanPrefix))) {
-          let code = cleanPrefix.length > 0 ? cleanPrefix : "T";
-          while (code.length < 11) code += Math.floor(Math.random() * 10);
-          return code.slice(0, 11);
-        }
-
-        // Alternating mode
-        let code = cleanPrefix.slice(0, 10);
-        let nextShouldBeDigit = code.length === 0 ? true : isNaN(code[code.length - 1]);
-        while (code.length < 10) {
-          code += nextShouldBeDigit ? weightedChoice(digitWeights) : weightedChoice(letterWeights);
-          nextShouldBeDigit = !nextShouldBeDigit;
-        }
-        return code;
-      }
-
-      // User ID Generator
-      function* userIdGenerator(baseUserId) {
-        for (let i = 1; i <= 127; i++) yield "0".repeat(i) + baseUserId;
-        for (let i = 1; i <= 125; i++) yield "+" + "0".repeat(i) + baseUserId;
-      }
-
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-      // Main
-      document.getElementById("configForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const cartId = document.getElementById("cartId").value;
-        const authToken = document.getElementById("authToken").value;
-        const baseUserId = document.getElementById("userId").value;
-        const pin = document.getElementById("pin").value;
-        const count = parseInt(document.getElementById("count").value);
-        const prefix = document.getElementById("prefix").value.trim();
-        const mode = document.getElementById("mode").value;
-        const customCoupons = document.getElementById("customCoupons").value.trim();
-
-        const tableBody = document.getElementById("resultTable");
-        tableBody.innerHTML = "";
-
-        let coupons = [];
-        if (customCoupons.length > 0) {
-          coupons = customCoupons.split("\n").map((c) => c.trim()).filter(Boolean);
-        } else {
-          const generated = new Set();
-          while (coupons.length < count) {
-            const c = generateCoupon(prefix, mode);
-            if (!generated.has(c)) {
-              generated.add(c);
-              coupons.push(c);
-            }
-          }
-        }
-
-        const userIds = userIdGenerator(baseUserId);
-        let currentUserId = baseUserId;
-        let couponCounter = 0;
-
-        for (let i = 0; i < coupons.length; i++) {
-          const coupon = coupons[i];
-          const row = document.createElement("tr");
-          row.innerHTML = `<td>${i + 1}</td><td>${coupon}</td><td>⏳ Checking...</td><td></td><td>${currentUserId}</td>`;
-          tableBody.appendChild(row);
-
-          try {
-            const res = await fetch("/api/check-coupon", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ coupon, cartId, authToken, userId: currentUserId, pin }),
-            });
-
-            if (res.status === 403) {
-              const nextId = userIds.next();
-              if (!nextId.done) {
-                currentUserId = nextId.value;
-                console.warn("⚠️ 403 detected → switched User ID to:", currentUserId);
-              }
-              i--;
-              row.remove();
-              continue;
-            }
-
-            const data = await res.json();
-
-            // ✅ Success
-            if (data.result?.status === "success" || data.result?.result?.[0]?.applicable) {
-              const info = data.result?.additional_general_info || {};
-              row.cells[2].innerHTML = "✅ Valid";
-              row.cells[3].innerHTML = `SUCCESS - cart_id: ${info.cart_id || "?"}, customer_id: ${info.customer_id || "?"}`;
-              row.className = "table-success";
-              tableBody.insertBefore(row, tableBody.firstChild);
-
-            // ❌ Failure (error block)
-            } else if (data.error) {
-              const reasonObj = data.error.reason || {};
-              row.cells[2].innerHTML = "❌ Invalid";
-              row.cells[3].innerHTML = `${reasonObj.reason_code || "UNKNOWN"} - ${reasonObj.reason_eng || "Unknown"}`;
-              row.className = "table-danger";
-
-            // ❌ Other invalid
-            } else {
-              const reasonObj = data.result?.reason || data.result?.result?.[0] || {};
-              row.cells[2].innerHTML = "❌ Invalid";
-              row.cells[3].innerHTML = `${reasonObj.reason_code || "UNKNOWN"} - ${reasonObj.reason_eng || "Unknown"}`;
-              row.className = "table-danger";
-            }
-          } catch (err) {
-            row.cells[2].innerHTML = "⚠️ Error";
-            row.cells[3].innerHTML = err.message;
-            row.className = "table-warning";
-          }
-
-          couponCounter++;
-          if (couponCounter % 6 === 0) {
-            const nextId = userIds.next();
-            if (!nextId.done) currentUserId = nextId.value;
-          }
-          if (i < coupons.length - 1) await sleep(3000);
-        }
+      // ⬇️ Download Button
+      document.getElementById("downloadBtn").addEventListener("click",()=>{
+        if(validCoupons.length===0){alert("No valid coupons to download!");return;}
+        const blob=new Blob([validCoupons.join("\n")],{type:"text/plain"});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url;a.download="valid_coupons.txt";a.click();
+        URL.revokeObjectURL(url);
       });
     </script>
   </body>
