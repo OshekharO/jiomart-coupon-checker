@@ -154,7 +154,7 @@
       function generateCoupon(prefixInput = "", mode = "auto") {
         const cleanPrefix = (prefixInput || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-        // Detect numeric mode automatically
+        // Numeric mode
         if (mode === "numeric" || (mode === "auto" && /^T\d*$/.test(cleanPrefix))) {
           let code = cleanPrefix.length > 0 ? cleanPrefix : "T";
           while (code.length < 11) code += Math.floor(Math.random() * 10);
@@ -162,7 +162,7 @@
         }
 
         // Alternating mode
-        let code = cleanPrefix.slice(0, 10); // start with prefix
+        let code = cleanPrefix.slice(0, 10);
         let nextShouldBeDigit = code.length === 0 ? true : isNaN(code[code.length - 1]);
         while (code.length < 10) {
           code += nextShouldBeDigit ? weightedChoice(digitWeights) : weightedChoice(letterWeights);
@@ -197,10 +197,7 @@
 
         let coupons = [];
         if (customCoupons.length > 0) {
-          coupons = customCoupons
-            .split("\n")
-            .map((c) => c.trim())
-            .filter(Boolean);
+          coupons = customCoupons.split("\n").map((c) => c.trim()).filter(Boolean);
         } else {
           const generated = new Set();
           while (coupons.length < count) {
@@ -241,16 +238,27 @@
             }
 
             const data = await res.json();
+
+            // ✅ Success
             if (data.result?.status === "success" || data.result?.result?.[0]?.applicable) {
               const info = data.result?.additional_general_info || {};
               row.cells[2].innerHTML = "✅ Valid";
-              row.cells[3].innerHTML = "Discount applied!";
+              row.cells[3].innerHTML = `SUCCESS - cart_id: ${info.cart_id || "?"}, customer_id: ${info.customer_id || "?"}`;
               row.className = "table-success";
               tableBody.insertBefore(row, tableBody.firstChild);
+
+            // ❌ Failure (error block)
+            } else if (data.error) {
+              const reasonObj = data.error.reason || {};
+              row.cells[2].innerHTML = "❌ Invalid";
+              row.cells[3].innerHTML = `${reasonObj.reason_code || "UNKNOWN"} - ${reasonObj.reason_eng || "Unknown"}`;
+              row.className = "table-danger";
+
+            // ❌ Other invalid
             } else {
               const reasonObj = data.result?.reason || data.result?.result?.[0] || {};
               row.cells[2].innerHTML = "❌ Invalid";
-              row.cells[3].innerHTML = `${reasonObj.reason_code || "UNKNOWN"}`;
+              row.cells[3].innerHTML = `${reasonObj.reason_code || "UNKNOWN"} - ${reasonObj.reason_eng || "Unknown"}`;
               row.className = "table-danger";
             }
           } catch (err) {
