@@ -39,8 +39,13 @@ export default async function handler(req, res) {
     // Ensure po_id is a number
     const poIdNum = typeof po_id === 'number' ? po_id : parseInt(po_id, 10);
     
-    // Clean up cookie string - remove escape sequences that may have been copied from DevTools
-    const cleanCookie = cookie.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    // Clean up cookie string - remove all escape sequences that may have been copied from DevTools
+    // Handle multiple levels of escaping: \\\" -> \" -> "
+    let cleanCookie = cookie;
+    // Remove all backslashes before quotes
+    cleanCookie = cleanCookie.replace(/\\+"/g, '"');
+    // Remove remaining backslashes (but keep single backslashes in other contexts)
+    cleanCookie = cleanCookie.replace(/\\{2,}/g, '');
 
     console.log("🚀 Checking BigBasket coupon:", voucher_code, "| PO ID:", poIdNum);
 
