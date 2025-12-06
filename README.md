@@ -22,12 +22,14 @@ Sending too many requests too fast may cause:
 
 ## ✨ Features
 
-- ✅ Generate **10-character coupons** (strict rule enforced).  
+- ✅ **Multi-Platform Support**: JioMart and BigBasket
+- ✅ Generate **JioMart 10-character coupons** (strict rule enforced).  
+- ✅ Generate **BigBasket 26-character coupons** (format: BBSAVE150-4XXXXXXXXXXXXXXX).  
 - ✅ Supports **prefix-based coupons** or **fully random generation**.  
 - ✅ **Validates prefix length** (max 10 chars, warning + red border if exceeded).  
 - ✅ **Alternate Number–Letter pattern** in coupon codes.  
 - ✅ Test multiple coupons automatically.  
-- ✅ 5-second delay between each coupon check (to avoid spamming).  
+- ✅ 3-second delay between each coupon check (to avoid spamming).  
 - ✅ Responsive Bootstrap UI.  
 
 ---
@@ -37,12 +39,13 @@ Sending too many requests too fast may cause:
 ```
 .
 ├── public/
-│   └── index.html         # Frontend UI (Bootstrap + JS)
+│   └── index.html                  # Frontend UI (Bootstrap + JS)
 ├── api/
-│   └── check-coupon.js  # Backend API (Node.js + Axios, runs on Vercel)
-├── vercel.json        # Vercel deployment config
-├── package.json       # Dependencies for serverless function
-└── README.md          # Documentation
+│   ├── check-coupon.js             # JioMart API (Node.js + Axios, runs on Vercel)
+│   └── check-bigbasket-coupon.js   # BigBasket API (Node.js + Axios, runs on Vercel)
+├── vercel.json                     # Vercel deployment config
+├── package.json                    # Dependencies for serverless function
+└── README.md                       # Documentation
 ```
 
 ---
@@ -98,9 +101,15 @@ vercel
 
 ## 📜 Example Coupon Patterns
 
+### JioMart Coupons (10 characters)
 - Prefix `1J7M` → `1J7M5G5K7V`  
 - Prefix `3M9B` → `3M9B1V2Y9A`  
 - No prefix → `8K2J4R9M7D` (fully random)
+
+### BigBasket Coupons (26 characters)
+- Default prefix `BBSAVE150-4` → `BBSAVE150-4RMY02FEAGKBRP1`
+- Custom prefix `BBTEST-4` → `BBTEST-4RRQQ1UXTGCX0RX000`
+- Format: `[PREFIX]-4[15 random alphanumeric chars]`
 
 ---
 

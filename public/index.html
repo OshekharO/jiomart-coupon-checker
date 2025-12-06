@@ -133,6 +133,19 @@
         if(mode==="numeric"||(mode==="auto"&&/^T\d*$/.test(cleanPrefix))){let code=cleanPrefix.length>0?cleanPrefix:"T";while(code.length<11) code+=Math.floor(Math.random()*10);return code.slice(0,11);}
         let code=cleanPrefix.slice(0,10);let nextShouldBeDigit=code.length===0?true:isNaN(code[code.length-1]);while(code.length<10){code+=nextShouldBeDigit?weightedChoice(digitWeights):weightedChoice(letterWeights);nextShouldBeDigit=!nextShouldBeDigit;}return code;}
 
+      function generateBigBasketCoupon(prefixInput=""){
+        // BigBasket coupon format: BBSAVE150-4 + 15 random alphanumeric characters
+        // Example: BBSAVE150-4RMY02FEAGKBRP1
+        const cleanPrefix = (prefixInput || "BBSAVE150-4").toUpperCase();
+        let code = cleanPrefix;
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const targetLength = 26; // Total length of BigBasket coupons
+        while(code.length < targetLength) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      }
+
       function* userIdGenerator(baseUserId){for(let i=1;i<=127;i++)yield"0".repeat(i)+baseUserId;for(let i=1;i<=125;i++)yield"+"+"0".repeat(i)+baseUserId;}
       const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -143,13 +156,19 @@
         const platform = this.value;
         const jiomartFields = document.querySelector(".jiomart-fields");
         const bigbasketFields = document.querySelector(".bigbasket-fields");
+        const prefixInput = document.getElementById("prefix");
+        const modeSelect = document.getElementById("mode");
         
         if (platform === "jiomart") {
           jiomartFields.classList.remove("hidden");
           bigbasketFields.classList.add("hidden");
+          prefixInput.placeholder = "e.g. T25 or M7N";
+          modeSelect.parentElement.style.display = "block";
         } else {
           jiomartFields.classList.add("hidden");
           bigbasketFields.classList.remove("hidden");
+          prefixInput.placeholder = "e.g. BBSAVE150-4 (default)";
+          modeSelect.parentElement.style.display = "none";
         }
       });
 
@@ -165,8 +184,18 @@
 
         const tableBody=document.getElementById("resultTable");tableBody.innerHTML="";
         let coupons=[];
-        if(customCoupons.length>0){coupons=customCoupons.split("\n").map(c=>c.trim()).filter(Boolean);}
-        else{const generated=new Set();while(coupons.length<count){const c=generateCoupon(prefix,mode);if(!generated.has(c)){generated.add(c);coupons.push(c);}}}
+        if(customCoupons.length>0){
+          coupons=customCoupons.split("\n").map(c=>c.trim()).filter(Boolean);
+        } else {
+          const generated=new Set();
+          while(coupons.length<count){
+            const c = platform === "bigbasket" ? generateBigBasketCoupon(prefix) : generateCoupon(prefix,mode);
+            if(!generated.has(c)){
+              generated.add(c);
+              coupons.push(c);
+            }
+          }
+        }
 
         if (platform === "jiomart") {
           await checkJioMartCoupons(coupons, tableBody);
