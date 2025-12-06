@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ voucher_code, result: response.data });
   } catch (err) {
-    console.error("❌ Error for BigBasket coupon:", req.body?.voucher_code, "|", err.message);
+    console.error("❌ Error for BigBasket coupon:", body?.voucher_code, "|", err.message);
     return res.status(500).json({
       error: err.response?.data || err.message
     });

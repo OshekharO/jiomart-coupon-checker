@@ -129,23 +129,38 @@
 
       function weightedChoice(weights){const items=Object.keys(weights);const probs=Object.values(weights);const total=probs.reduce((a,b)=>a+b,0);let r=Math.random()*total;for(let i=0;i<items.length;i++){r-=probs[i];if(r<=0) return items[i];}return items[items.length-1];}
 
-      function generateCoupon(prefixInput="",mode="auto"){const cleanPrefix=(prefixInput||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
-        if(mode==="numeric"||(mode==="auto"&&/^T\d*$/.test(cleanPrefix))){let code=cleanPrefix.length>0?cleanPrefix:"T";while(code.length<10) code+=Math.floor(Math.random()*10);return code.slice(0,10);}
-        let code=cleanPrefix.slice(0,10);let nextShouldBeDigit=code.length===0?true:isNaN(code[code.length-1]);while(code.length<10){code+=nextShouldBeDigit?weightedChoice(digitWeights):weightedChoice(letterWeights);nextShouldBeDigit=!nextShouldBeDigit;}return code;}
+      function generateCoupon(prefixInput="",mode="auto"){
+        const cleanPrefix=(prefixInput||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+        if(mode==="numeric"||(mode==="auto"&&/^T\d*$/.test(cleanPrefix))){
+          let code=cleanPrefix.length>0?cleanPrefix.slice(0,10):"T";
+          while(code.length<10) code+=Math.floor(Math.random()*10);
+          return code;
+        }
+        let code=cleanPrefix.slice(0,10);
+        let nextShouldBeDigit=code.length===0?true:isNaN(code[code.length-1]);
+        while(code.length<10){
+          code+=nextShouldBeDigit?weightedChoice(digitWeights):weightedChoice(letterWeights);
+          nextShouldBeDigit=!nextShouldBeDigit;
+        }
+        return code;
+      }
 
       function generateBigBasketCoupon(prefixInput=""){
         // BigBasket coupon format: BBSAVE150-4 + 15 random alphanumeric characters
         // Example: BBSAVE150-4RMY02FEAGKBRP1
-        const cleanPrefix = (prefixInput || "BBSAVE150-4").toUpperCase();
+        const defaultPrefix = "BBSAVE150-4";
+        const cleanPrefix = (prefixInput || defaultPrefix).toUpperCase();
         const targetLength = 26; // Total length of BigBasket coupons
         
-        // Validate prefix length
+        // Validate prefix length - truncate if too long, use default if invalid
+        let code;
         if(cleanPrefix.length >= targetLength) {
-          console.warn("Prefix too long, using default");
-          return generateBigBasketCoupon("BBSAVE150-4");
+          console.warn("Prefix too long, truncating to fit");
+          code = cleanPrefix.slice(0, targetLength - 1);
+        } else {
+          code = cleanPrefix;
         }
         
-        let code = cleanPrefix;
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         while(code.length < targetLength) {
           code += chars.charAt(Math.floor(Math.random() * chars.length));
