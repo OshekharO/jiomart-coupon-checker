@@ -38,6 +38,9 @@ export default async function handler(req, res) {
 
     // Ensure po_id is a number
     const poIdNum = typeof po_id === 'number' ? po_id : parseInt(po_id, 10);
+    
+    // Clean up cookie string - remove escape sequences that may have been copied from DevTools
+    const cleanCookie = cookie.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 
     console.log("🚀 Checking BigBasket coupon:", voucher_code, "| PO ID:", poIdNum);
 
@@ -70,7 +73,7 @@ export default async function handler(req, res) {
           "x-entry-context": "bbnow",
           "x-entry-context-id": "10",
           "x-tracker": bb_txn_id,
-          "cookie": cookie
+          "cookie": cleanCookie
         }
       }
     );
