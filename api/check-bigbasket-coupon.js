@@ -36,7 +36,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    console.log("🚀 Checking BigBasket coupon:", voucher_code, "| PO ID:", po_id);
+    // Ensure po_id is a number
+    const poIdNum = typeof po_id === 'number' ? po_id : parseInt(po_id, 10);
+
+    console.log("🚀 Checking BigBasket coupon:", voucher_code, "| PO ID:", poIdNum);
 
     const response = await axios.post(
       "https://www.bigbasket.com/order/v2/potentialorder/voucher",
@@ -47,7 +50,7 @@ export default async function handler(req, res) {
         voucher_code,
         operation,
         neucoins,
-        po_id
+        po_id: poIdNum
       },
       {
         headers: {

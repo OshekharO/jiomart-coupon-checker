@@ -290,7 +290,7 @@
 
       async function checkBigBasketCoupons(coupons, tableBody) {
         const bbTxnId = document.getElementById("bbTxnId").value;
-        const poId = document.getElementById("poId").value;
+        const poId = parseInt(document.getElementById("poId").value, 10);
         const csurftoken = document.getElementById("csurftoken").value;
         const cookie = document.getElementById("cookie").value;
 
